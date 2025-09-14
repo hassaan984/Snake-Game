@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Snake Game</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1 class="game-title">NEON SNAKE</h1>
+            <div class="score-container">
+                <span class="score-label">SCORE:</span>
+                <span class="score" id="score">0</span>
+            </div>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            
+            <div class="game-over-screen" id="gameOverScreen">
+                <div class="game-over-content">
+                    <h2 class="game-over-title">GAME OVER</h2>
+                    <p class="final-score">Final Score: <span id="finalScore">0</span></p>
+                    <button class="restart-btn" id="restartBtn">RESTART GAME</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-info">
+                <p>Use Arrow Keys or WASD to move</p>
+                <p>Press SPACE to pause/resume</p>
+            </div>
+            
+            <div class="mobile-controls" id="mobileControls">
+                <div class="control-row">
+                    <button class="control-btn" data-direction="up">↑</button>
+                </div>
+                <div class="control-row">
+                    <button class="control-btn" data-direction="left">←</button>
+                    <button class="control-btn" data-direction="down">↓</button>
+                    <button class="control-btn" data-direction="right">→</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
