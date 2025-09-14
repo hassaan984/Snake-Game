@@ -18,7 +18,7 @@ class SnakeGame {
         ];
         this.food = {};
         this.dx = 0;
-        this.dy = 0;
+        this.dy = 1; // Start moving down in a straight line
         this.score = 0;
         this.gameRunning = false;
         this.gamePaused = false;
@@ -78,16 +78,31 @@ class SnakeGame {
             return;
         }
         
-        // Prevent reverse direction
-        const newDx = (key === 'arrowleft' || key === 'a') ? -1 : 
-                     (key === 'arrowright' || key === 'd') ? 1 : this.dx;
-        const newDy = (key === 'arrowup' || key === 'w') ? -1 : 
-                     (key === 'arrowdown' || key === 's') ? 1 : this.dy;
-        
-        // Prevent snake from going backwards into itself
-        if (newDx !== -this.dx || newDy !== -this.dy) {
-            this.dx = newDx;
-            this.dy = newDy;
+        // Handle movement - only one axis at a time
+        if (key === 'arrowleft' || key === 'a') {
+            // Only allow left if not currently moving right
+            if (this.dx !== 1) {
+                this.dx = -1;
+                this.dy = 0;
+            }
+        } else if (key === 'arrowright' || key === 'd') {
+            // Only allow right if not currently moving left
+            if (this.dx !== -1) {
+                this.dx = 1;
+                this.dy = 0;
+            }
+        } else if (key === 'arrowup' || key === 'w') {
+            // Only allow up if not currently moving down
+            if (this.dy !== 1) {
+                this.dx = 0;
+                this.dy = -1;
+            }
+        } else if (key === 'arrowdown' || key === 's') {
+            // Only allow down if not currently moving up
+            if (this.dy !== -1) {
+                this.dx = 0;
+                this.dy = 1;
+            }
         }
         
         e.preventDefault();
@@ -96,17 +111,31 @@ class SnakeGame {
     handleMobileControl(direction) {
         if (!this.gameRunning) return;
         
-        const directions = {
-            'up': {dx: 0, dy: -1},
-            'down': {dx: 0, dy: 1},
-            'left': {dx: -1, dy: 0},
-            'right': {dx: 1, dy: 0}
-        };
-        
-        const newDirection = directions[direction];
-        if (newDirection && (newDirection.dx !== -this.dx || newDirection.dy !== -this.dy)) {
-            this.dx = newDirection.dx;
-            this.dy = newDirection.dy;
+        // Handle movement - only one axis at a time
+        if (direction === 'left') {
+            // Only allow left if not currently moving right
+            if (this.dx !== 1) {
+                this.dx = -1;
+                this.dy = 0;
+            }
+        } else if (direction === 'right') {
+            // Only allow right if not currently moving left
+            if (this.dx !== -1) {
+                this.dx = 1;
+                this.dy = 0;
+            }
+        } else if (direction === 'up') {
+            // Only allow up if not currently moving down
+            if (this.dy !== 1) {
+                this.dx = 0;
+                this.dy = -1;
+            }
+        } else if (direction === 'down') {
+            // Only allow down if not currently moving up
+            if (this.dy !== -1) {
+                this.dx = 0;
+                this.dy = 1;
+            }
         }
     }
     
@@ -125,7 +154,7 @@ class SnakeGame {
         const deltaX = x - centerX;
         const deltaY = y - centerY;
         
-        // Determine swipe direction
+        // Determine swipe direction - only one axis at a time
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
             // Horizontal swipe
             if (deltaX > 0 && this.dx !== -1) {
@@ -351,7 +380,7 @@ class SnakeGame {
         // Reset game state
         this.snake = [{x: 10, y: 10}];
         this.dx = 0;
-        this.dy = 0;
+        this.dy = 1; // Start moving down in a straight line
         this.score = 0;
         this.scoreElement.textContent = this.score;
         this.gameOverScreen.classList.remove('show');
