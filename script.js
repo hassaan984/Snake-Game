@@ -7,6 +7,8 @@ class SnakeGame {
         this.finalScoreElement = document.getElementById('finalScore');
         this.restartBtn = document.getElementById('restartBtn');
         this.mobileControls = document.getElementById('mobileControls');
+        this.soundBtn = document.getElementById('soundBtn');
+        this.soundIcon = this.soundBtn.querySelector('.sound-icon');
         
         // Game settings
         this.gridSize = 20;
@@ -24,6 +26,13 @@ class SnakeGame {
         this.gamePaused = false;
         this.gameLoop = null;
         
+        // Sound system
+        this.audioContext = null;
+        this.sounds = {};
+        this.soundEnabled = true;
+        this.userInteracted = false;
+        this.backgroundMusicPlaying = false;
+        
         // Colors with neon effects
         this.colors = {
             snake: '#00ffff',
@@ -39,6 +48,7 @@ class SnakeGame {
     
     init() {
         this.setupEventListeners();
+        this.initAudio();
         this.generateFood();
         this.startGame();
         this.resizeCanvas();
@@ -46,6 +56,9 @@ class SnakeGame {
     }
     
     setupEventListeners() {
+        // Sound button
+        this.soundBtn.addEventListener('click', () => this.toggleSound());
+        
         // Keyboard controls
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
         
@@ -66,7 +79,153 @@ class SnakeGame {
         this.canvas.addEventListener('touchmove', (e) => e.preventDefault());
     }
     
+    // Audio System Methods
+    initAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.createSounds();
+        } catch (error) {
+            console.warn('Web Audio API not supported:', error);
+        }
+    }
+    
+    createSounds() {
+        if (!this.audioContext) return;
+        
+        // Background music - simple looping melody
+        this.sounds.backgroundMusic = this.createBackgroundMusic();
+        
+        // Food eating sound - short pop
+        this.sounds.foodEat = this.createFoodSound();
+        
+        // Game over sound - descending tone
+        this.sounds.gameOver = this.createGameOverSound();
+    }
+    
+    createBackgroundMusic() {
+        const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25]; // C4 to C5
+        let currentNote = 0;
+        let lastPlayTime = 0;
+        
+        return () => {
+            if (!this.soundEnabled || !this.userInteracted) return;
+            
+            const now = this.audioContext.currentTime;
+            if (now - lastPlayTime < 0.5) return; // Prevent overlapping
+            
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(notes[currentNote], now);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.1, now + 0.1);
+            gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 0.4);
+            
+            currentNote = (currentNote + 1) % notes.length;
+            lastPlayTime = now;
+        };
+    }
+    
+    createFoodSound() {
+        return () => {
+            if (!this.soundEnabled || !this.userInteracted) return;
+            
+            const now = this.audioContext.currentTime;
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, now);
+            oscillator.frequency.exponentialRampToValueAtTime(1200, now + 0.1);
+            oscillator.type = 'square';
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+        };
+    }
+    
+    createGameOverSound() {
+        return () => {
+            if (!this.soundEnabled || !this.userInteracted) return;
+            
+            const now = this.audioContext.currentTime;
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(400, now);
+            oscillator.frequency.exponentialRampToValueAtTime(100, now + 1);
+            oscillator.type = 'sawtooth';
+            
+            gainNode.gain.setValueAtTime(0, now);
+            gainNode.gain.linearRampToValueAtTime(0.2, now + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, now + 1);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 1);
+        };
+    }
+    
+    toggleSound() {
+        this.soundEnabled = !this.soundEnabled;
+        this.soundBtn.classList.toggle('muted', !this.soundEnabled);
+        this.soundIcon.textContent = this.soundEnabled ? '🔊' : '🔇';
+        
+        if (!this.soundEnabled && this.backgroundMusicPlaying) {
+            this.stopBackgroundMusic();
+        } else if (this.soundEnabled && this.gameRunning && this.userInteracted) {
+            this.startBackgroundMusic();
+        }
+    }
+    
+    startBackgroundMusic() {
+        if (!this.soundEnabled || !this.userInteracted || this.backgroundMusicPlaying) return;
+        
+        this.backgroundMusicPlaying = true;
+        this.playBackgroundMusic();
+    }
+    
+    stopBackgroundMusic() {
+        this.backgroundMusicPlaying = false;
+    }
+    
+    playBackgroundMusic() {
+        if (!this.backgroundMusicPlaying || !this.soundEnabled) return;
+        
+        this.sounds.backgroundMusic();
+        setTimeout(() => this.playBackgroundMusic(), 500);
+    }
+    
+    playSound(soundName) {
+        if (!this.soundEnabled || !this.userInteracted || !this.sounds[soundName]) return;
+        this.sounds[soundName]();
+    }
+
     handleKeyPress(e) {
+        // Mark user interaction for audio
+        if (!this.userInteracted) {
+            this.userInteracted = true;
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+        }
+        
         if (!this.gameRunning) return;
         
         const key = e.key.toLowerCase();
@@ -109,6 +268,14 @@ class SnakeGame {
     }
     
     handleMobileControl(direction) {
+        // Mark user interaction for audio
+        if (!this.userInteracted) {
+            this.userInteracted = true;
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+        }
+        
         if (!this.gameRunning) return;
         
         // Handle movement - only one axis at a time
@@ -140,6 +307,14 @@ class SnakeGame {
     }
     
     handleTouch(e) {
+        // Mark user interaction for audio
+        if (!this.userInteracted) {
+            this.userInteracted = true;
+            if (this.audioContext && this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+        }
+        
         if (!this.gameRunning) return;
         
         e.preventDefault();
@@ -196,14 +371,23 @@ class SnakeGame {
         this.gameRunning = true;
         this.gamePaused = false;
         this.gameLoop = setInterval(() => this.update(), 150);
+        
+        // Start background music if user has interacted
+        if (this.userInteracted) {
+            this.startBackgroundMusic();
+        }
     }
     
     togglePause() {
         this.gamePaused = !this.gamePaused;
         if (this.gamePaused) {
             clearInterval(this.gameLoop);
+            this.stopBackgroundMusic();
         } else {
             this.gameLoop = setInterval(() => this.update(), 150);
+            if (this.userInteracted) {
+                this.startBackgroundMusic();
+            }
         }
     }
     
@@ -255,6 +439,9 @@ class SnakeGame {
         this.score += 10;
         this.scoreElement.textContent = this.score;
         this.generateFood();
+        
+        // Play food eating sound
+        this.playSound('foodEat');
         
         // Increase speed slightly
         clearInterval(this.gameLoop);
@@ -372,8 +559,12 @@ class SnakeGame {
     gameOver() {
         this.gameRunning = false;
         clearInterval(this.gameLoop);
+        this.stopBackgroundMusic();
         this.finalScoreElement.textContent = this.score;
         this.gameOverScreen.classList.add('show');
+        
+        // Play game over sound
+        this.playSound('gameOver');
     }
     
     restartGame() {
